@@ -20,6 +20,7 @@ class InvestigativePacket with _$InvestigativePacket {
     @JsonKey(name: "fall_back_state") String? fallbackState,
     @JsonKey(name: "old_fall_back_state") String? oldFallbackState,
     @JsonKey(name: "new_fall_back_state") String? newFallbackState,
+    @JsonKey(name: "decode_error_reason") String? decodeErrorReason,
   }) = _InvestigativePacket;
 
   factory InvestigativePacket.fromJson(Map<String, dynamic> json) =>

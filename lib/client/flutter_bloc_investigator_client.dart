@@ -134,7 +134,21 @@ class FlutterBlocInvestigatorClient {
           ),
         ),
       );
-    } on NoSuchMethodError {
+    } on NoSuchMethodError catch (error) {
+      data = json.encode(
+        InvestigativePacket(
+            type: PacketType.blocFallbackTransitioned,
+            identity: identity,
+            decodeErrorReason: error.toString(),
+            blocName: bloc.runtimeType.toString(),
+            oldFallbackState: transition.currentState.toString(),
+            newFallbackState: transition.nextState.toString(),
+            blocChange: BlocChange(
+              blocName: bloc.runtimeType.toString(),
+              eventName: transition.event.runtimeType.toString(),
+            )),
+      );
+    } on JsonUnsupportedObjectError catch (error) {
       data = json.encode(
         InvestigativePacket(
             type: PacketType.blocFallbackTransitioned,
@@ -142,6 +156,7 @@ class FlutterBlocInvestigatorClient {
             blocName: bloc.runtimeType.toString(),
             oldFallbackState: transition.currentState.toString(),
             newFallbackState: transition.nextState.toString(),
+            decodeErrorReason: error.cause.toString(),
             blocChange: BlocChange(
               blocName: bloc.runtimeType.toString(),
               eventName: transition.event.runtimeType.toString(),
@@ -175,7 +190,7 @@ class FlutterBlocInvestigatorClient {
     }
   }
 
-  Future<void> _sendLog(String log, {bool handleFailure = true}) async {
+  Future<void> _sendLog(String log, {bool handleFailure = false}) async {
     await lock.synchronized(() async {
       if (_connections.isEmpty) {
         buffer.add(log);
