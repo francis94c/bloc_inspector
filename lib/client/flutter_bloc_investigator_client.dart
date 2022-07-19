@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_bloc_investigator_client/enums/packet_type.dart';
 import 'package:flutter_bloc_investigator_client/models/bloc_change.dart';
@@ -21,25 +22,35 @@ class FlutterBlocInvestigatorClient {
   late final InstanceIdentity identity;
   late final List<String> buffer = [];
 
-  final String? ipAddress;
   final int port;
+  final bool enabled;
+  final bool inEmulator;
+  final bool log;
 
+  String? ipAddress;
   Discovery? nsd;
 
   FlutterBlocInvestigatorClient({
     this.ipAddress = "10.0.2.2",
     this.port = 8275,
+    this.enabled = kDebugMode,
+    this.inEmulator = true,
+    this.log = false,
   }) {
     _initialize();
   }
 
   Future<void> _initialize() async {
+    if (!enabled) return;
+
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
 
     identity = InstanceIdentity(
         applicationId: packageInfo.packageName,
         appName: packageInfo.appName,
         deviceOS: Platform.operatingSystem);
+
+    if (inEmulator) ipAddress = "10.0.2.2";
 
     if (ipAddress == null) {
       nsd = await startDiscovery('_http._tcp');
@@ -94,6 +105,11 @@ class FlutterBlocInvestigatorClient {
   }
 
   void onCreateBloc(BlocBase bloc) async {
+    if (!enabled) {
+      _log("Inspector is disabled");
+      return;
+    }
+
     String? data;
 
     try {
@@ -119,6 +135,11 @@ class FlutterBlocInvestigatorClient {
   }
 
   void onTransition(Bloc bloc, Transition transition) async {
+    if (!enabled) {
+      _log("Inspector is disabled");
+      return;
+    }
+
     String? data;
     try {
       data = json.encode(
@@ -268,6 +289,11 @@ class FlutterBlocInvestigatorClient {
     for (var element in _connections) {
       element.send("Hello From App: onError");
     }
+  }
+
+  void _log(String message) {
+    if (!log) return;
+    logger.d(message);
   }
 
   /// Dispose.
