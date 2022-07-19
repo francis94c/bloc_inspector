@@ -31,7 +31,7 @@ class FlutterBlocInvestigatorClient {
   Discovery? nsd;
 
   FlutterBlocInvestigatorClient({
-    this.ipAddress = "10.0.2.2",
+    this.ipAddress,
     this.port = 8275,
     this.enabled = kDebugMode,
     this.inEmulator = true,
