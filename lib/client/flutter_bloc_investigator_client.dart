@@ -68,7 +68,7 @@ class FlutterBlocInvestigatorClient {
         await _announceIdentity(connection);
         _connections.add(connection);
       } catch (error, trace) {
-        logger.e("An Error Occurred.", error, trace);
+        _logError("An Error Occurred.", error, trace);
       }
     }
   }
@@ -95,7 +95,7 @@ class FlutterBlocInvestigatorClient {
         _connections.add(connection);
         stopDiscovery(nsd!);
       } catch (error, trace) {
-        logger.e("An Error Occurred.", error, trace);
+        _logError("An Error Occurred.", error, trace);
       }
     }
   }
@@ -106,7 +106,7 @@ class FlutterBlocInvestigatorClient {
 
   void onCreateBloc(BlocBase bloc) async {
     if (!enabled) {
-      _log("Inspector is disabled");
+      _logDebug("Inspector is disabled");
       return;
     }
 
@@ -136,7 +136,7 @@ class FlutterBlocInvestigatorClient {
 
   void onTransition(Bloc bloc, Transition transition) async {
     if (!enabled) {
-      _log("Inspector is disabled");
+      _logDebug("Inspector is disabled");
       return;
     }
 
@@ -291,9 +291,14 @@ class FlutterBlocInvestigatorClient {
     }
   }
 
-  void _log(String message) {
+  void _logDebug(String message) {
     if (!log) return;
     logger.d(message);
+  }
+
+  void _logError(String message, Object error, StackTrace trace) {
+    if (!log) return;
+    logger.e(error);
   }
 
   /// Dispose.
