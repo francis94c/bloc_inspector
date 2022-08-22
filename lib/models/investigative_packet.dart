@@ -1,10 +1,10 @@
 // ignore_for_file: invalid_annotation_target
 
-import 'package:flutter_bloc_investigator_client/models/bloc_change.dart';
-import 'package:flutter_bloc_investigator_client/models/instance_identity.dart';
+import 'package:bloc_inspector/models/bloc_change.dart';
+import 'package:bloc_inspector/models/instance_identity.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'package:flutter_bloc_investigator_client/enums/packet_type.dart';
+import 'package:bloc_inspector/enums/packet_type.dart';
 
 part 'investigative_packet.freezed.dart';
 part 'investigative_packet.g.dart';
