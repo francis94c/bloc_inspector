@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_bloc_investigator_client/enums/packet_type.dart';
-import 'package:flutter_bloc_investigator_client/models/bloc_change.dart';
-import 'package:flutter_bloc_investigator_client/models/instance_identity.dart';
-import 'package:flutter_bloc_investigator_client/models/investigative_packet.dart';
+import 'package:bloc_inspector/enums/packet_type.dart';
+import 'package:bloc_inspector/models/bloc_change.dart';
+import 'package:bloc_inspector/models/instance_identity.dart';
+import 'package:bloc_inspector/models/investigative_packet.dart';
 import 'package:logger/logger.dart';
 import 'package:nsd/nsd.dart';
 import 'package:package_info_plus/package_info_plus.dart';
