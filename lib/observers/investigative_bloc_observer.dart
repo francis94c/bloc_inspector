@@ -15,6 +15,9 @@ class InvestigativeBlocObserver extends BlocObserver {
   @override
   void onTransition(Bloc bloc, Transition transition) {
     super.onTransition(bloc, transition);
-    client.onTransition(bloc, transition);
+    client.onTransitionBloc(bloc, transition);
   }
+
+  @override
+  void onChange(BlocBase bloc, Change change) {}
 }

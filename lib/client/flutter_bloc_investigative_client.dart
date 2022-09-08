@@ -134,7 +134,7 @@ class FlutterBlocInvestigativeClient {
     }
   }
 
-  void onTransition(Bloc bloc, Transition transition) async {
+  void onTransitionBloc(Bloc bloc, Transition transition) async {
     if (!enabled) {
       _logDebug("Inspector is disabled");
       return;
@@ -181,6 +181,63 @@ class FlutterBlocInvestigativeClient {
             blocChange: BlocChange(
               blocName: bloc.runtimeType.toString(),
               eventName: transition.event.runtimeType.toString(),
+            )),
+      );
+    } catch (error) {
+      logger.e(error);
+    }
+    if (data != null) {
+      await _sendLog(data);
+    }
+  }
+
+  void onChange(BlocBase bloc, Change change) async {
+    if (!enabled) {
+      _logDebug("Inspector is disabled");
+      return;
+    }
+
+    String? data;
+    try {
+      data = json.encode(
+        InvestigativePacket(
+          type: PacketType.blocTransitioned,
+          blocName: bloc.runtimeType.toString(),
+          identity: identity,
+          blocChange: BlocChange(
+            blocName: bloc.runtimeType.toString(),
+            eventName: "No Transition",
+            oldState: change.currentState.toJson(),
+            newState: change.nextState.toJson(),
+          ),
+        ),
+      );
+    } on NoSuchMethodError catch (error) {
+      data = json.encode(
+        InvestigativePacket(
+            type: PacketType.blocFallbackTransitioned,
+            identity: identity,
+            decodeErrorReason: error.toString(),
+            blocName: bloc.runtimeType.toString(),
+            oldFallbackState: change.currentState.toString(),
+            newFallbackState: change.nextState.toString(),
+            blocChange: BlocChange(
+              blocName: bloc.runtimeType.toString(),
+              eventName: "No Transition",
+            )),
+      );
+    } on JsonUnsupportedObjectError catch (error) {
+      data = json.encode(
+        InvestigativePacket(
+            type: PacketType.blocFallbackTransitioned,
+            identity: identity,
+            blocName: bloc.runtimeType.toString(),
+            oldFallbackState: change.currentState.toString(),
+            newFallbackState: change.nextState.toString(),
+            decodeErrorReason: error.cause.toString(),
+            blocChange: BlocChange(
+              blocName: bloc.runtimeType.toString(),
+              eventName: "No Transition",
             )),
       );
     } catch (error) {
