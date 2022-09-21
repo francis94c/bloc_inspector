@@ -1,7 +1,7 @@
 name: bloc_inspector
 description: A new Flutter package project.
 version: 0.0.1
-homepage:
+repository: https://github.com/francis94c/bloc_inspector
 
 scripts:
   run: "flutter run -t lib/main_development.dart --flavor development"
