@@ -1,35 +1,36 @@
-name: bloc_inspector
+name: bloc_inspector_sdk
 description: Bloc inspector client.
 version: 0.0.4
 repository: https://github.com/francis94c/bloc_inspector
 
 scripts:
-  run: "flutter run -t lib/main_development.dart --flavor development"
-  gen: "dart run build_runner build"
-  gen-force: "dart run build_runner build --delete-conflicting-outputs"
+  run: 'flutter run -t lib/main_development.dart --flavor development'
+  gen: 'dart run build_runner build'
+  gen-force: 'dart run build_runner build --delete-conflicting-outputs'
 
 environment:
-  sdk: ">=2.17.5 <4.0.0"
-  flutter: ">=1.17.0"
+  sdk: '>=2.17.5 <4.0.0'
+  flutter: '>=1.17.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  nsd: ^2.2.3
+  nsd:
+    path: ../../packages/nsd/nsd
   tcp_client_dart: ^0.2.0
-  logger: ^1.1.0
+  logger: ^2.4.0
   flutter_bloc: ^8.0.1
   json_annotation: ^4.3.0
   freezed_annotation: ^2.1.0
-  package_info_plus: ^3.0.0
   synchronized: ^3.0.0
+  dio: ^5.7.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
   freezed: ^2.3.4
   build_runner: any
   json_serializable: ^6.7.0

@@ -3,14 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bloc_inspector/enums/packet_type.dart';
-import 'package:bloc_inspector/models/bloc_change.dart';
-import 'package:bloc_inspector/models/instance_identity.dart';
-import 'package:bloc_inspector/models/investigative_packet.dart';
+import 'package:bloc_inspector_sdk/enums/packet_type.dart';
+import 'package:bloc_inspector_sdk/models/bloc_change.dart';
+import 'package:bloc_inspector_sdk/models/instance_identity.dart';
+import 'package:bloc_inspector_sdk/models/investigative_packet.dart';
 import 'package:logger/logger.dart';
 import 'package:nsd/nsd.dart';
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:tcp_client_dart/tcp_client_dart.dart';
 import 'package:synchronized/synchronized.dart' as synchronized;
 
 class FlutterBlocInvestigativeClient {
