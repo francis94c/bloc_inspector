@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:bloc_inspector_sdk/extensions/string.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:bloc_inspector_sdk/enums/packet_type.dart';
@@ -13,9 +15,7 @@ import 'package:synchronized/synchronized.dart' as synchronized;
 
 class FlutterBlocInvestigativeClient {
   final synchronized.Lock lock = synchronized.Lock();
-  static const int bufferLength = 40;
 
-  late final List<TcpClient> _connections = [];
   late final Logger logger = Logger();
   late final InstanceIdentity identity;
   late final List<String> buffer = [];
@@ -23,14 +23,22 @@ class FlutterBlocInvestigativeClient {
   final int port;
   final bool enabled;
   final bool inEmulator;
+  final String applicationId;
+  final String appName;
   final bool log;
+  final Dio dio = Dio(BaseOptions(headers: {
+    'Content-Type': 'application/json',
+  }));
 
   String? ipAddress;
   Discovery? nsd;
+  int _sentCount = 0;
 
   FlutterBlocInvestigativeClient({
     this.ipAddress,
     this.port = 8275,
+    this.applicationId = "com.example.app",
+    this.appName = "Example App",
     this.enabled = kDebugMode,
     this.inEmulator = true,
     this.log = false,
@@ -41,11 +49,9 @@ class FlutterBlocInvestigativeClient {
   Future<void> _initialize() async {
     if (!enabled) return;
 
-    PackageInfo packageInfo = await PackageInfo.fromPlatform();
-
     identity = InstanceIdentity(
-        applicationId: packageInfo.packageName,
-        appName: packageInfo.appName,
+        applicationId: applicationId,
+        appName: appName,
         deviceOS: Platform.operatingSystem);
 
     if (inEmulator) ipAddress = "10.0.2.2";
@@ -56,25 +62,20 @@ class FlutterBlocInvestigativeClient {
       logger.d("Listening for relevant services.");
     } else {
       try {
-        TcpClient connection = await TcpClient.connect(
-          ipAddress!,
-          port,
-          terminatorString: "\n",
-          connectionType: TcpConnectionType.persistent,
-        );
-        connection.stringStream.listen(_onMessage);
-        await _announceIdentity(connection);
-        _connections.add(connection);
+        await _announceIdentity();
       } catch (error, trace) {
         _logError("An Error Occurred.", error, trace);
       }
     }
   }
 
-  Future<void> _announceIdentity(TcpClient connection) async {
-    final response = await connection.sendAndWait(
-        "${json.encode(InvestigativePacket(type: PacketType.instanceIdentity, identity: identity))}[&&]");
-    logger.d(response?.body);
+  String get _baseUrl => "http://$ipAddress:$port";
+
+  Future<void> _announceIdentity() async {
+    final response = await dio.post(_baseUrl,
+        data: json.encode(InvestigativePacket(
+            type: PacketType.instanceIdentity, identity: identity)));
+    logger.d(response.data);
     logger.d("Announced Identity");
   }
 
@@ -82,24 +83,12 @@ class FlutterBlocInvestigativeClient {
     if (status == ServiceStatus.found &&
         service.name == "flutter_bloc_investigator") {
       try {
-        TcpClient connection = await TcpClient.connect(
-          service.host!,
-          service.port!,
-          terminatorString: "\n",
-          connectionType: TcpConnectionType.persistent,
-        );
-        connection.stringStream.listen(_onMessage);
-        await _announceIdentity(connection);
-        _connections.add(connection);
+        await _announceIdentity();
         stopDiscovery(nsd!);
       } catch (error, trace) {
         _logError("An Error Occurred.", error, trace);
       }
     }
-  }
-
-  void _onMessage(String message) {
-    logger.d(message);
   }
 
   void onCreateBloc(BlocBase bloc) async {
@@ -120,7 +109,7 @@ class FlutterBlocInvestigativeClient {
     } catch (error) {
       data = json.encode(InvestigativePacket(
         type: PacketType.blocFallbackCreated,
-        blocName: bloc.runtimeType.toString(),
+        blocName: bloc.runtimeType.toString().humanized,
         fallbackState: bloc.state.toString(),
         identity: identity,
       ));
@@ -143,11 +132,11 @@ class FlutterBlocInvestigativeClient {
       data = json.encode(
         InvestigativePacket(
           type: PacketType.blocTransitioned,
-          blocName: bloc.runtimeType.toString(),
+          blocName: bloc.runtimeType.toString().humanized,
           identity: identity,
           blocChange: BlocChange(
-            blocName: bloc.runtimeType.toString(),
-            eventName: transition.event.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
+            eventName: transition.event.runtimeType.toString().humanized,
             oldState: transition.currentState.toJson(),
             newState: transition.nextState.toJson(),
           ),
@@ -159,12 +148,12 @@ class FlutterBlocInvestigativeClient {
             type: PacketType.blocFallbackTransitioned,
             identity: identity,
             decodeErrorReason: error.toString(),
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             oldFallbackState: transition.currentState.toString(),
             newFallbackState: transition.nextState.toString(),
             blocChange: BlocChange(
-              blocName: bloc.runtimeType.toString(),
-              eventName: transition.event.runtimeType.toString(),
+              blocName: bloc.runtimeType.toString().humanized,
+              eventName: transition.event.runtimeType.toString().humanized,
             )),
       );
     } on JsonUnsupportedObjectError catch (error) {
@@ -172,13 +161,13 @@ class FlutterBlocInvestigativeClient {
         InvestigativePacket(
             type: PacketType.blocFallbackTransitioned,
             identity: identity,
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             oldFallbackState: transition.currentState.toString(),
             newFallbackState: transition.nextState.toString(),
             decodeErrorReason: error.cause.toString(),
             blocChange: BlocChange(
-              blocName: bloc.runtimeType.toString(),
-              eventName: transition.event.runtimeType.toString(),
+              blocName: bloc.runtimeType.toString().humanized,
+              eventName: transition.event.runtimeType.toString().humanized,
             )),
       );
     } catch (error) {
@@ -200,10 +189,10 @@ class FlutterBlocInvestigativeClient {
       data = json.encode(
         InvestigativePacket(
           type: PacketType.blocTransitioned,
-          blocName: bloc.runtimeType.toString(),
+          blocName: bloc.runtimeType.toString().humanized,
           identity: identity,
           blocChange: BlocChange(
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             eventName: "No Transition",
             oldState: change.currentState.toJson(),
             newState: change.nextState.toJson(),
@@ -216,11 +205,11 @@ class FlutterBlocInvestigativeClient {
             type: PacketType.blocFallbackTransitioned,
             identity: identity,
             decodeErrorReason: error.toString(),
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             oldFallbackState: change.currentState.toString(),
             newFallbackState: change.nextState.toString(),
             blocChange: BlocChange(
-              blocName: bloc.runtimeType.toString(),
+              blocName: bloc.runtimeType.toString().humanized,
               eventName: "No Transition",
             )),
       );
@@ -229,12 +218,12 @@ class FlutterBlocInvestigativeClient {
         InvestigativePacket(
             type: PacketType.blocFallbackTransitioned,
             identity: identity,
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             oldFallbackState: change.currentState.toString(),
             newFallbackState: change.nextState.toString(),
             decodeErrorReason: error.cause.toString(),
             blocChange: BlocChange(
-              blocName: bloc.runtimeType.toString(),
+              blocName: bloc.runtimeType.toString().humanized,
               eventName: "No Transition",
             )),
       );
@@ -253,55 +242,28 @@ class FlutterBlocInvestigativeClient {
       logger.d("Listening for relevant services");
     } else {
       try {
-        TcpClient connection = await TcpClient.connect(ipAddress!, port,
-            terminatorString: "\n",
-            connectionType: TcpConnectionType.persistent);
-        connection.stringStream.listen(_onMessage);
-        await _announceIdentity(connection);
-        _connections.add(connection);
-        await _flush();
+        await _announceIdentity();
       } catch (error, trace) {
-        logger.e("An Error Occurred.", error, trace);
+        logger.e("An Error Occurred.", error: error, stackTrace: trace);
       }
     }
   }
 
-  Future<void> _sendLog(String log, {bool handleFailure = false}) async {
+  Future<void> _sendLog(String log) async {
     await lock.synchronized(() async {
-      if (_connections.isEmpty) {
-        buffer.add(log);
-        if (handleFailure) {
-          await _establishConnection();
-        }
-        return;
+      if (_sentCount > 10) {
+        await _establishConnection();
+        _sentCount = 0;
       }
 
-      for (TcpClient connection in _connections) {
-        try {
-          await connection.sendAndWait("$log[&&]");
-        } catch (error) {
-          logger.e(error);
-        }
+      try {
+        await dio.post(_baseUrl, data: log);
+        _sentCount++;
+      } catch (error) {
+        logger.e(error);
       }
     });
   }
-
-  Future<void> _flush() async {
-    await _sendLog(buffer.join("[&&]"), handleFailure: false);
-    buffer.clear();
-  }
-
-  // void _reconnect(TcpClient oldConnection) async {
-  //   try {
-  //     TcpClient connection =
-  //         await TcpClient.connect(oldConnection.host, oldConnection.port);
-  //     _connections.remove(oldConnection);
-  //     _connections.add(connection);
-  //     await _flush();
-  //   } catch (error) {
-  //     logger.e(error);
-  //   }
-  // }
 
   void onBlocChange(BlocBase bloc, Change change) async {
     String? data;
@@ -309,10 +271,10 @@ class FlutterBlocInvestigativeClient {
       data = json.encode(
         InvestigativePacket(
           type: PacketType.blocTransitioned,
-          blocName: bloc.runtimeType.toString(),
+          blocName: bloc.runtimeType.toString().humanized,
           identity: identity,
           blocChange: BlocChange(
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             eventName: "Generic",
             oldState: change.currentState.toJson(),
             newState: change.nextState.toJson(),
@@ -324,11 +286,11 @@ class FlutterBlocInvestigativeClient {
         InvestigativePacket(
             type: PacketType.blocFallbackTransitioned,
             identity: identity,
-            blocName: bloc.runtimeType.toString(),
+            blocName: bloc.runtimeType.toString().humanized,
             oldFallbackState: change.currentState.toString(),
             newFallbackState: change.nextState.toString(),
             blocChange: BlocChange(
-              blocName: bloc.runtimeType.toString(),
+              blocName: bloc.runtimeType.toString().humanized,
               eventName: "Generic",
             )),
       );
@@ -341,9 +303,7 @@ class FlutterBlocInvestigativeClient {
   }
 
   void onBlocError() {
-    for (var element in _connections) {
-      element.send("Hello From App: onError");
-    }
+    // TODO: Implement
   }
 
   void _logDebug(String message) {
