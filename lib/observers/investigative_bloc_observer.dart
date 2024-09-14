@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:bloc_inspector/client/flutter_bloc_investigative_client.dart';
+import 'package:bloc_inspector_sdk/client/flutter_bloc_investigative_client.dart';
 
 class InvestigativeBlocObserver extends BlocObserver {
   final FlutterBlocInvestigativeClient client;
